@@ -1,0 +1,99 @@
+:root {
+  font-family: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #14263c;
+  background: #f2f8fc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --ink: #14263c;
+  --ink-soft: #425b74;
+  --muted: #5d748c;
+  --subtle: #748aa0;
+  --navy: #102a46;
+  --navy-deep: #0b2038;
+  --blue: #1973c9;
+  --blue-hover: #125da8;
+  --cyan: #159db4;
+  --blue-soft: #e5f2fb;
+  --surface: #ffffff;
+  --canvas: #f2f8fc;
+  --line: #d6e5ef;
+  --line-strong: #b9d0e1;
+  --success: #147455;
+  --success-bg: #e9f6f1;
+  --warning: #805b14;
+  --warning-bg: #fbf3df;
+  --danger: #a43e48;
+  --danger-bg: #fbebec;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-card: 0 18px 48px rgba(24, 72, 111, .09);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(ellipse at 12% 5%, rgba(196, 232, 249, .42), transparent 34rem), var(--canvas);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  color: #fff;
+  background: var(--blue);
+}
+
+:focus-visible {
+  outline: 3px solid #55bcd0;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

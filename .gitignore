@@ -1,0 +1,30 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+dist/
+web/dist/
+server/dist/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+
+# Local tooling state
+.expo/
+.vercel/
+*.log
+
+# Local databases and backups
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.backup
+*.bak
+*.dump
+**/backups/
+server/data/

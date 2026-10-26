@@ -1,0 +1,553 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INPUTER
+  ADMIN
+  MANAGER
+  ADMINISTRATOR
+  STAFF
+  STUDENT
+  SECURITY
+}
+
+enum RoleProfile {
+  LEGACY
+  TARGET
+}
+
+enum BlockGender {
+  MALE
+  FEMALE
+  MIXED
+}
+
+enum ResidentGender {
+  MALE
+  FEMALE
+}
+
+enum SemesterStatus {
+  ACTIVE
+  UPCOMING
+  CLOSED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  PARTLY_FILLED
+  FULL
+  RESERVED
+  UNDER_MAINTENANCE
+}
+
+enum BookingStatus {
+  HELD
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  RELEASED
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+enum PaymentNetwork {
+  MTN_MOMO
+  TELECEL_CASH
+}
+
+enum PaymentStatus {
+  INITIALIZING
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+  REFUND_RECORDED
+}
+
+enum PaymentSource {
+  ONLINE
+  MANUAL_CASH
+  MANUAL_MOMO
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum VisitorStatus {
+  CHECKED_IN
+  CHECKED_OUT
+  FLAGGED
+}
+
+enum RoomChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum EmailJobStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model User {
+  id                       String      @id @default(uuid()) @db.Uuid
+  email                    String      @unique @db.VarChar(254)
+  fullName                 String      @db.VarChar(120)
+  phone                    String?     @db.VarChar(32)
+  passwordHash             String
+  role                     Role        @default(STUDENT)
+  roleProfile              RoleProfile @default(LEGACY)
+  permissions              Json        @default("[]")
+  isActive                 Boolean     @default(true)
+  deactivatedAt            DateTime?
+  deactivatedById          String?     @db.Uuid
+  sessionVersion           Int         @default(0)
+  emailVerifiedAt          DateTime?
+  mustChangePassword       Boolean     @default(false)
+  twoFactorEnabled         Boolean     @default(false)
+  twoFactorSecretEncrypted String?
+  lastTotpStep             Int?
+  failedLoginCount         Int         @default(0)
+  lockedUntil              DateTime?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+
+  studentProfile      StudentProfile?
+  refreshTokens       RefreshToken[]
+  recoveryCodes       RecoveryCode[]
+  emailTokens         EmailVerificationToken[]
+  resetTokens         PasswordResetToken[]
+  maintenanceAssigned MaintenanceRequest[]     @relation("MaintenanceAssignee")
+  noticesCreated      Notice[]                 @relation("NoticeAuthor")
+  visitorsLogged      Visitor[]                @relation("VisitorLogger")
+  auditActions        AuditLog[]               @relation("AuditActor")
+  emailJobs           EmailJob[]
+  createdBookings     Booking[]                @relation("BookingCreator")
+  roomChangesDecided  RoomChangeRequest[]      @relation("RoomChangeDecider")
+  paymentsRecorded    Payment[]                @relation("PaymentRecorder")
+}
+
+model StudentProfile {
+  id            String          @id @default(uuid()) @db.Uuid
+  userId        String          @unique @db.Uuid
+  studentId     String          @unique @db.VarChar(40)
+  gender        ResidentGender?
+  guardianName  String?         @db.VarChar(120)
+  guardianPhone String?         @db.VarChar(32)
+  consentAt     DateTime
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  payments    Payment[]
+  maintenance MaintenanceRequest[]
+  visitors    Visitor[]
+  noticesRead NoticeRead[]
+  roomChanges RoomChangeRequest[]
+
+  @@index([studentId])
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  familyId   String    @db.Uuid
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?   @db.Uuid
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, familyId])
+  @@index([expiresAt])
+}
+
+model RecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  codeHash  String    @unique @db.VarChar(64)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Semester {
+  id           String         @id @default(uuid()) @db.Uuid
+  name         String         @unique @db.VarChar(80)
+  startsAt     DateTime
+  endsAt       DateTime
+  status       SemesterStatus @default(UPCOMING)
+  depositBps   Int            @default(5000)
+  balanceDueAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  prices   RoomTypePrice[]
+  bookings Booking[]
+  payments Payment[]
+
+  @@index([status, startsAt])
+}
+
+model Hostel {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(120)
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocks Block[]
+}
+
+model Block {
+  id        String      @id @default(uuid()) @db.Uuid
+  hostelId  String      @db.Uuid
+  name      String      @db.VarChar(80)
+  gender    BlockGender @default(MIXED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  hostel  Hostel        @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  floors  Floor[]
+  notices NoticeBlock[]
+
+  @@unique([hostelId, name])
+}
+
+model Floor {
+  id        String @id @default(uuid()) @db.Uuid
+  blockId   String @db.Uuid
+  name      String @db.VarChar(40)
+  sortOrder Int    @default(0)
+
+  block Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  rooms Room[]
+
+  @@unique([blockId, name])
+}
+
+model RoomType {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(60)
+  capacity  Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms  Room[]
+  prices RoomTypePrice[]
+}
+
+model RoomTypePrice {
+  id           String   @id @default(uuid()) @db.Uuid
+  roomTypeId   String   @db.Uuid
+  semesterId   String   @db.Uuid
+  pricePesewas Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roomType RoomType  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  semester Semester  @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@unique([roomTypeId, semesterId])
+  @@index([semesterId])
+}
+
+model Room {
+  id         String     @id @default(uuid()) @db.Uuid
+  floorId    String     @db.Uuid
+  roomTypeId String     @db.Uuid
+  roomNumber String     @db.VarChar(30)
+  status     RoomStatus @default(AVAILABLE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  floor               Floor                @relation(fields: [floorId], references: [id], onDelete: Restrict)
+  roomType            RoomType             @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  beds                Bed[]
+  bookings            Booking[]
+  maintenanceRequests MaintenanceRequest[]
+  roomChangeRequests  RoomChangeRequest[]
+
+  @@unique([floorId, roomNumber])
+  @@index([roomTypeId, status])
+}
+
+model Bed {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @db.Uuid
+  label     String   @db.VarChar(20)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  room     Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([roomId, label])
+  @@index([roomId, active])
+}
+
+model Booking {
+  id            String        @id @default(uuid()) @db.Uuid
+  studentId     String        @db.Uuid
+  semesterId    String        @db.Uuid
+  roomId        String        @db.Uuid
+  bedId         String        @db.Uuid
+  priceId       String        @db.Uuid
+  status        BookingStatus @default(HELD)
+  pricePesewas  Int
+  holdExpiresAt DateTime?
+  confirmedAt   DateTime?
+  checkedInAt   DateTime?
+  checkedOutAt  DateTime?
+  cancelledAt   DateTime?
+  createdById   String?       @db.Uuid
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student     StudentProfile      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  semester    Semester            @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  room        Room                @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  bed         Bed                 @relation(fields: [bedId], references: [id], onDelete: Restrict)
+  price       RoomTypePrice       @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  createdBy   User?               @relation("BookingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  payments    Payment[]
+  roomChanges RoomChangeRequest[]
+
+  @@index([studentId, semesterId, status])
+  @@index([roomId, semesterId, status])
+  @@index([bedId, semesterId, status])
+  @@index([status, holdExpiresAt])
+}
+
+model Payment {
+  id                String          @id @default(uuid()) @db.Uuid
+  studentId         String          @db.Uuid
+  semesterId        String          @db.Uuid
+  bookingId         String          @db.Uuid
+  amountPesewas     Int
+  feePesewas        Int             @default(0)
+  netPesewas        Int             @default(0)
+  network           PaymentNetwork?
+  source            PaymentSource   @default(ONLINE)
+  status            PaymentStatus   @default(INITIALIZING)
+  momoReference     String?         @db.VarChar(120)
+  paystackReference String?         @unique @db.VarChar(120)
+  idempotencyKey    String          @unique @db.VarChar(120)
+  receiptNumber     String?         @unique @db.VarChar(40)
+  recordedById      String?         @db.Uuid
+  verifiedAt        DateTime?
+  refundNote        String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  semester   Semester       @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  recordedBy User?          @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, semesterId, status])
+  @@index([semesterId, createdAt])
+  @@index([source, network, status])
+}
+
+model PaystackWebhookEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventId     String   @unique @db.VarChar(120)
+  reference   String   @db.VarChar(120)
+  event       String   @db.VarChar(80)
+  processedAt DateTime @default(now())
+
+  @@index([reference])
+}
+
+model MaintenanceRequest {
+  id           String            @id @default(uuid()) @db.Uuid
+  studentId    String            @db.Uuid
+  assignedToId String?           @db.Uuid
+  roomId       String            @db.Uuid
+  title        String            @db.VarChar(120)
+  description  String
+  photoUrl     String?
+  status       MaintenanceStatus @default(OPEN)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  resolvedAt   DateTime?
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignedTo User?          @relation("MaintenanceAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  room       Room           @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([assignedToId, status])
+}
+
+model Visitor {
+  id            String        @id @default(uuid()) @db.Uuid
+  studentId     String?       @db.Uuid
+  loggedById    String        @db.Uuid
+  fullName      String        @db.VarChar(120)
+  identityRef   String?       @db.VarChar(80)
+  purpose       String?       @db.VarChar(240)
+  status        VisitorStatus @default(CHECKED_IN)
+  checkedInAt   DateTime      @default(now())
+  checkedOutAt  DateTime?
+  flaggedReason String?
+
+  student  StudentProfile? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  loggedBy User            @relation("VisitorLogger", fields: [loggedById], references: [id], onDelete: Restrict)
+
+  @@index([status, checkedInAt])
+  @@index([studentId, checkedInAt])
+}
+
+model Notice {
+  id          String    @id @default(uuid()) @db.Uuid
+  authorId    String    @db.Uuid
+  title       String    @db.VarChar(160)
+  body        String
+  targetRoles Role[]    @default([])
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User          @relation("NoticeAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  blocks NoticeBlock[]
+  reads  NoticeRead[]
+
+  @@index([publishedAt, expiresAt])
+}
+
+model NoticeBlock {
+  noticeId String @db.Uuid
+  blockId  String @db.Uuid
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  block  Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@id([noticeId, blockId])
+}
+
+model NoticeRead {
+  noticeId  String   @db.Uuid
+  studentId String   @db.Uuid
+  readAt    DateTime @default(now())
+
+  notice  Notice         @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([noticeId, studentId])
+}
+
+model RoomChangeRequest {
+  id              String           @id @default(uuid()) @db.Uuid
+  studentId       String           @db.Uuid
+  bookingId       String           @db.Uuid
+  requestedRoomId String           @db.Uuid
+  reason          String
+  status          RoomChangeStatus @default(PENDING)
+  decidedById     String?          @db.Uuid
+  decidedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  booking       Booking        @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  requestedRoom Room           @relation(fields: [requestedRoomId], references: [id], onDelete: Restrict)
+  decidedBy     User?          @relation("RoomChangeDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([studentId, status])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(80)
+  entityId   String?  @db.VarChar(120)
+  metadata   Json     @default("{}")
+  ipAddress  String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+model EmailJob {
+  id        String         @id @default(uuid()) @db.Uuid
+  dedupeKey String?        @unique @db.VarChar(200)
+  userId    String?        @db.Uuid
+  toEmail   String         @db.VarChar(254)
+  template  String         @db.VarChar(80)
+  payload   Json
+  status    EmailJobStatus @default(QUEUED)
+  attempts  Int            @default(0)
+  runAt     DateTime       @default(now())
+  sentAt    DateTime?
+  lastError String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, runAt])
+  @@index([toEmail, createdAt])
+}
+
+model AppSetting {
+  key       String   @id @db.VarChar(100)
+  value     Json
+  updatedAt DateTime @updatedAt
+}

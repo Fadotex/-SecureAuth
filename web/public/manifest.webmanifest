@@ -1,0 +1,18 @@
+{
+  "name": "Hostel Management",
+  "short_name": "Hostel",
+  "description": "Student accommodation, payments and hostel operations.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f8fa",
+  "theme_color": "#123a53",
+  "icons": [
+    {
+      "src": "/hostel-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
