@@ -11,6 +11,7 @@ import { operationsRouter } from './routes/operations.js';
 import { paymentRouter, handlePaystackWebhook } from './routes/payments.js';
 import { reportRouter } from './routes/reports.js';
 import { roomRouter } from './routes/rooms.js';
+import { healthRouter } from './routes/health.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { startEmailWorker } from './services/email.worker.js';
 import { startHoldExpiryWorker } from './services/hold-expiry.worker.js';
@@ -36,11 +37,7 @@ app.post('/api/v1/payments/paystack/webhook', express.raw({ type: 'application/j
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
-app.get('/api/v1/health', async (_req, res) => {
-  await prisma.$queryRaw`SELECT 1`;
-  return res.json({ status: 'ok', database: 'connected' });
-});
-
+app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/auth', authLimiter, authRouter);
 app.use('/api/v1', roomRouter);
 app.use('/api/v1', bookingRouter);

@@ -8,4 +8,4 @@ RUN DATABASE_URL="postgresql://hostel:hostel_dev_password@localhost:5432/hostel?
 RUN npm run build
 
 EXPOSE 3000
-CMD ["node", "dist/v1/server.js"]
+CMD ["node", "dist/src/v1/server.js"]

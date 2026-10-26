@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().optional(),
   HOSTEL_API_HOST: z.string().min(1).default('127.0.0.1'),
   HOSTEL_API_PORT: z.coerce.number().int().positive().default(3001),
   DATABASE_URL: z.string().min(1),
@@ -34,6 +35,8 @@ if (!accessTokenSecret || accessTokenSecret.length < 32) {
 }
 export const config = {
   ...parsed,
+  HOSTEL_API_HOST: parsed.NODE_ENV === 'production' ? '0.0.0.0' : parsed.HOSTEL_API_HOST,
+  HOSTEL_API_PORT: parsed.PORT ?? parsed.HOSTEL_API_PORT,
   ACCESS_TOKEN_SECRET: accessTokenSecret,
   FRONTEND_ORIGINS: parsed.FRONTEND_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean),
   PAYSTACK_WEBHOOK_IPS: parsed.PAYSTACK_WEBHOOK_IPS?.split(',').map((ip) => ip.trim()).filter(Boolean) ?? [],

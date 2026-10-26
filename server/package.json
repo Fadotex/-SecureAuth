@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/v1/server.js",
   "scripts": {
-    "start": "node dist/v1/server.js",
+    "start": "node dist/src/v1/server.js",
     "dev": "tsx watch src/v1/server.ts",
     "build": "tsc -p tsconfig.json",
     "db:generate": "prisma generate",
